@@ -24,7 +24,7 @@
 #include "help.hpp"
 #include "sha3.hpp"
 
-std::string readFile(const char * const szFilename)
+std::string readFile(const char *const szFilename)
 {
 	std::ifstream in(szFilename, std::ios::in | std::ios::binary);
 	std::ostringstream contents;
@@ -37,36 +37,39 @@ std::vector<cl_device_id> getAllDevices(cl_device_type deviceType = CL_DEVICE_TY
 	std::vector<cl_device_id> vDevices;
 
 	cl_uint platformIdCount = 0;
-	clGetPlatformIDs (0, NULL, &platformIdCount);
+	clGetPlatformIDs(0, NULL, &platformIdCount);
 
-	std::vector<cl_platform_id> platformIds (platformIdCount);
-	clGetPlatformIDs (platformIdCount, platformIds.data (), NULL);
+	std::vector<cl_platform_id> platformIds(platformIdCount);
+	clGetPlatformIDs(platformIdCount, platformIds.data(), NULL);
 
-	for( auto it = platformIds.cbegin(); it != platformIds.cend(); ++it ) {
+	for (auto it = platformIds.cbegin(); it != platformIds.cend(); ++it)
+	{
 		cl_uint countDevice;
 		clGetDeviceIDs(*it, deviceType, 0, NULL, &countDevice);
 
 		std::vector<cl_device_id> deviceIds(countDevice);
 		clGetDeviceIDs(*it, deviceType, countDevice, deviceIds.data(), &countDevice);
 
-		std::copy( deviceIds.begin(), deviceIds.end(), std::back_inserter(vDevices) );
+		std::copy(deviceIds.begin(), deviceIds.end(), std::back_inserter(vDevices));
 	}
 
 	return vDevices;
 }
 
 template <typename T, typename U, typename V, typename W>
-T clGetWrapper(U function, V param, W param2) {
+T clGetWrapper(U function, V param, W param2)
+{
 	T t;
 	function(param, param2, sizeof(t), &t, NULL);
 	return t;
 }
 
 template <typename U, typename V, typename W>
-std::string clGetWrapperString(U function, V param, W param2) {
+std::string clGetWrapperString(U function, V param, W param2)
+{
 	size_t len;
 	function(param, param2, 0, NULL, &len);
-	char * const szString = new char[len];
+	char *const szString = new char[len];
 	function(param, param2, len, szString, NULL);
 	std::string r(szString);
 	delete[] szString;
@@ -74,15 +77,18 @@ std::string clGetWrapperString(U function, V param, W param2) {
 }
 
 template <typename T, typename U, typename V, typename W>
-std::vector<T> clGetWrapperVector(U function, V param, W param2) {
+std::vector<T> clGetWrapperVector(U function, V param, W param2)
+{
 	size_t len;
 	function(param, param2, 0, NULL, &len);
 	len /= sizeof(T);
 	std::vector<T> v;
-	if (len > 0) {
-		T * pArray = new T[len];
+	if (len > 0)
+	{
+		T *pArray = new T[len];
 		function(param, param2, len * sizeof(T), pArray, NULL);
-		for (size_t i = 0; i < len; ++i) {
+		for (size_t i = 0; i < len; ++i)
+		{
 			v.push_back(pArray[i]);
 		}
 		delete[] pArray;
@@ -90,17 +96,21 @@ std::vector<T> clGetWrapperVector(U function, V param, W param2) {
 	return v;
 }
 
-std::vector<std::string> getBinaries(cl_program & clProgram) {
+std::vector<std::string> getBinaries(cl_program &clProgram)
+{
 	std::vector<std::string> vReturn;
 	auto vSizes = clGetWrapperVector<size_t>(clGetProgramInfo, clProgram, CL_PROGRAM_BINARY_SIZES);
-	if (!vSizes.empty()) {
-		unsigned char * * pBuffers = new unsigned char *[vSizes.size()];
-		for (size_t i = 0; i < vSizes.size(); ++i) {
+	if (!vSizes.empty())
+	{
+		unsigned char **pBuffers = new unsigned char *[vSizes.size()];
+		for (size_t i = 0; i < vSizes.size(); ++i)
+		{
 			pBuffers[i] = new unsigned char[vSizes[i]];
 		}
 
 		clGetProgramInfo(clProgram, CL_PROGRAM_BINARIES, vSizes.size() * sizeof(unsigned char *), pBuffers, NULL);
-		for (size_t i = 0; i < vSizes.size(); ++i) {
+		for (size_t i = 0; i < vSizes.size(); ++i)
+		{
 			std::string strData(reinterpret_cast<char *>(pBuffers[i]), vSizes[i]);
 			vReturn.push_back(strData);
 			delete[] pBuffers[i];
@@ -112,51 +122,67 @@ std::vector<std::string> getBinaries(cl_program & clProgram) {
 	return vReturn;
 }
 
-template <typename T> bool printResult(const T & t, const cl_int & err) {
+template <typename T>
+bool printResult(const T &t, const cl_int &err)
+{
 	std::cout << ((t == NULL) ? lexical_cast::write(err) : "OK") << std::endl;
 	return t == NULL;
 }
 
-bool printResult(const cl_int err) {
+bool printResult(const cl_int err)
+{
 	std::cout << ((err != CL_SUCCESS) ? lexical_cast::write(err) : "OK") << std::endl;
 	return err != CL_SUCCESS;
 }
 
-std::string keccakDigest(const std::string data) {
+std::string keccakDigest(const std::string data)
+{
 	char digest[32];
 	sha3(data.c_str(), data.size(), digest, 32);
 	return std::string(digest, 32);
 }
 
-void trim(std::string & s) {
+void trim(std::string &s)
+{
 	const auto iLeft = s.find_first_not_of(" \t\r\n");
-	if (iLeft != std::string::npos) {
+	if (iLeft != std::string::npos)
+	{
 		s.erase(0, iLeft);
 	}
 
 	const auto iRight = s.find_last_not_of(" \t\r\n");
-	if (iRight != std::string::npos) {
+	if (iRight != std::string::npos)
+	{
 		const auto count = s.length() - iRight - 1;
 		s.erase(iRight + 1, count);
 	}
 }
 
-std::string makePreprocessorInitHashExpression(const std::string & strAddressBinary, const std::string & strInitCodeDigest) {
+std::string makePreprocessorInitHashExpression(const std::string &strAddressBinary, const std::string &strInitCodeDigest, const std::string &strSaltPrefix)
+{
 	std::random_device rd;
 	std::mt19937_64 eng(rd());
 	std::uniform_int_distribution<unsigned int> distr; // C++ requires integer type: "C2338	note : char, signed char, unsigned char, int8_t, and uint8_t are not allowed"
-	ethhash h = { 0 };
+	ethhash h = {0};
 
 	h.b[0] = 0xff;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 20; ++i)
+	{
 		h.b[i + 1] = strAddressBinary[i];
 	}
 
-	for (int i = 0; i < 32; ++i) {
-		h.b[i + 21] = distr(eng);
+	for (int i = 0; i < strSaltPrefix.length(); ++i)
+	{
+		h.b[i + 21] = strSaltPrefix[i];
 	}
 
-	for (int i = 0; i < 32; ++i) {
+	for (int i = 0; i < 32 - strSaltPrefix.length(); ++i)
+	{
+		h.b[i + 21 + strSaltPrefix.length()] = distr(eng);
+	}
+
+	for (int i = 0; i < 32; ++i)
+	{
 		h.b[i + 53] = strInitCodeDigest[i];
 	}
 
@@ -164,9 +190,11 @@ std::string makePreprocessorInitHashExpression(const std::string & strAddressBin
 
 	std::ostringstream oss;
 	oss << std::hex;
-	for (int i = 0; i < 25; ++i) {
+	for (int i = 0; i < 25; ++i)
+	{
 		oss << "0x" << h.q[i];
-		if (i + 1 != 25) {
+		if (i + 1 != 25)
+		{
 			oss << ",";
 		}
 	}
@@ -174,8 +202,10 @@ std::string makePreprocessorInitHashExpression(const std::string & strAddressBin
 	return oss.str();
 }
 
-int main(int argc, char * * argv) {
-	try {
+int main(int argc, char **argv)
+{
+	try
+	{
 		ArgParser argp(argc, argv);
 		bool bHelp = false;
 		bool bModeBenchmark = false;
@@ -198,6 +228,8 @@ int main(int argc, char * * argv) {
 		std::string strAddress;
 		std::string strInitCode;
 		std::string strInitCodeFile;
+		std::string strSaltPrefix;
+		std::string strInitCodeHash;
 
 		argp.addSwitch('h', "help", bHelp);
 		argp.addSwitch('0', "benchmark", bModeBenchmark);
@@ -220,21 +252,27 @@ int main(int argc, char * * argv) {
 		argp.addSwitch('A', "address", strAddress);
 		argp.addSwitch('I', "init-code", strInitCode);
 		argp.addSwitch('i', "init-code-file", strInitCodeFile);
+		argp.addSwitch('p', "salt-prefix", strSaltPrefix);
+		argp.addSwitch('H', "init-code-hash", strInitCodeHash);
 
-		if (!argp.parse()) {
+		if (!argp.parse())
+		{
 			std::cout << "error: bad arguments, try again :<" << std::endl;
 			return 1;
 		}
 
-		if (bHelp) {
+		if (bHelp)
+		{
 			std::cout << g_strHelp << std::endl;
 			return 0;
 		}
 
 		// Parse hexadecimal values and/or read init code from file
-		if (strInitCodeFile != "") {
+		if (strInitCodeFile != "")
+		{
 			std::ifstream ifs(strInitCodeFile);
-			if (!ifs.is_open()) {
+			if (!ifs.is_open())
+			{
 				std::cout << "error: failed to open input file for init code" << std::endl;
 				return 1;
 			}
@@ -243,34 +281,58 @@ int main(int argc, char * * argv) {
 
 		trim(strInitCode);
 		const std::string strAddressBinary = parseHexadecimalBytes(strAddress);
-		const std::string strInitCodeBinary = parseHexadecimalBytes(strInitCode);
-		const std::string strInitCodeDigest = keccakDigest(strInitCodeBinary);
-		const std::string strPreprocessorInitStructure = makePreprocessorInitHashExpression(strAddressBinary, strInitCodeDigest);
+		const std::string strInitCodeBinary = strInitCodeHash == "" ? parseHexadecimalBytes(strInitCode) : "";
+		const std::string strInitCodeDigest = strInitCodeHash == "" ? keccakDigest(strInitCodeBinary) : strInitCodeHash;
+		const std::string strsaltPrefixBinary = strSaltPrefix != "" ? parseHexadecimalBytes(strSaltPrefix) : "";
+		const std::string strPreprocessorInitStructure = makePreprocessorInitHashExpression(strAddressBinary, strInitCodeDigest, strsaltPrefixBinary);
 
 		mode mode = ModeFactory::benchmark();
-		if (bModeBenchmark) {
+		if (bModeBenchmark)
+		{
 			mode = ModeFactory::benchmark();
-		} else if (bModeZeroBytes) {
+		}
+		else if (bModeZeroBytes)
+		{
 			mode = ModeFactory::zerobytes();
-		}  else if (bModeZeros) {
+		}
+		else if (bModeZeros)
+		{
 			mode = ModeFactory::zeros();
-		} else if (bModeLetters) {
+		}
+		else if (bModeLetters)
+		{
 			mode = ModeFactory::letters();
-		} else if (bModeNumbers) {
+		}
+		else if (bModeNumbers)
+		{
 			mode = ModeFactory::numbers();
-		} else if (!strModeLeading.empty()) {
+		}
+		else if (!strModeLeading.empty())
+		{
 			mode = ModeFactory::leading(strModeLeading.front());
-		} else if (!strModeMatching.empty()) {
+		}
+		else if (!strModeMatching.empty())
+		{
 			mode = ModeFactory::matching(strModeMatching);
-		} else if (bModeLeadingRange) {
+		}
+		else if (bModeLeadingRange)
+		{
 			mode = ModeFactory::leadingRange(rangeMin, rangeMax);
-		} else if (bModeRange) {
+		}
+		else if (bModeRange)
+		{
 			mode = ModeFactory::range(rangeMin, rangeMax);
-		} else if(bModeMirror) {
+		}
+		else if (bModeMirror)
+		{
 			mode = ModeFactory::mirror();
-		} else if (bModeDoubles) {
+		}
+		else if (bModeDoubles)
+		{
 			mode = ModeFactory::doubles();
-		} else {
+		}
+		else
+		{
 			std::cout << g_strHelp << std::endl;
 			return 0;
 		}
@@ -284,13 +346,15 @@ int main(int argc, char * * argv) {
 		cl_int errorCode;
 
 		std::cout << "Devices:" << std::endl;
-		for (size_t i = 0; i < vFoundDevices.size(); ++i) {
+		for (size_t i = 0; i < vFoundDevices.size(); ++i)
+		{
 			// Ignore devices in skip index
-			if (std::find(vDeviceSkipIndex.begin(), vDeviceSkipIndex.end(), i) != vDeviceSkipIndex.end()) {
+			if (std::find(vDeviceSkipIndex.begin(), vDeviceSkipIndex.end(), i) != vDeviceSkipIndex.end())
+			{
 				continue;
 			}
 
-			cl_device_id & deviceId = vFoundDevices[i];
+			cl_device_id &deviceId = vFoundDevices[i];
 
 			const auto strName = clGetWrapperString(clGetDeviceInfo, deviceId, CL_DEVICE_NAME);
 			const auto computeUnits = clGetWrapper<cl_uint>(clGetDeviceInfo, deviceId, CL_DEVICE_MAX_COMPUTE_UNITS);
@@ -301,42 +365,50 @@ int main(int argc, char * * argv) {
 			mDeviceIndex[vFoundDevices[i]] = i;
 		}
 
-		if (vDevices.empty()) {
+		if (vDevices.empty())
+		{
 			return 1;
 		}
 
 		std::cout << std::endl;
 		std::cout << "Initializing OpenCL..." << std::endl;
 		std::cout << "  Creating context..." << std::flush;
-		auto clContext = clCreateContext( NULL, vDevices.size(), vDevices.data(), NULL, NULL, &errorCode);
-		if (printResult(clContext, errorCode)) {
+		auto clContext = clCreateContext(NULL, vDevices.size(), vDevices.data(), NULL, NULL, &errorCode);
+		if (printResult(clContext, errorCode))
+		{
 			return 1;
 		}
 
 		cl_program clProgram;
-		if (vDeviceBinary.size() == vDevices.size()) {
+		if (vDeviceBinary.size() == vDevices.size())
+		{
 			// Create program from binaries
 			std::cout << "  Loading kernel from binary..." << std::flush;
-			const unsigned char * * pKernels = new const unsigned char *[vDevices.size()];
-			for (size_t i = 0; i < vDeviceBinary.size(); ++i) {
+			const unsigned char **pKernels = new const unsigned char *[vDevices.size()];
+			for (size_t i = 0; i < vDeviceBinary.size(); ++i)
+			{
 				pKernels[i] = reinterpret_cast<const unsigned char *>(vDeviceBinary[i].data());
 			}
 
-			cl_int * pStatus = new cl_int[vDevices.size()];
+			cl_int *pStatus = new cl_int[vDevices.size()];
 
 			clProgram = clCreateProgramWithBinary(clContext, vDevices.size(), vDevices.data(), vDeviceBinarySize.data(), pKernels, pStatus, &errorCode);
-			if(printResult(clProgram, errorCode)) {
+			if (printResult(clProgram, errorCode))
+			{
 				return 1;
 			}
-		} else {
+		}
+		else
+		{
 			// Create a program from the kernel source
 			std::cout << "  Compiling kernel..." << std::flush;
 			const std::string strKeccak = readFile("keccak.cl");
 			const std::string strVanity = readFile("eradicate2.cl");
-			const char * szKernels[] = { strKeccak.c_str(), strVanity.c_str() };
+			const char *szKernels[] = {strKeccak.c_str(), strVanity.c_str()};
 
 			clProgram = clCreateProgramWithSource(clContext, sizeof(szKernels) / sizeof(char *), szKernels, NULL, &errorCode);
-			if (printResult(clProgram, errorCode)) {
+			if (printResult(clProgram, errorCode))
+			{
 				return 1;
 			}
 		}
@@ -345,14 +417,15 @@ int main(int argc, char * * argv) {
 		std::cout << "  Building program..." << std::flush;
 
 		const std::string strBuildOptions = "-D ERADICATE2_MAX_SCORE=" + lexical_cast::write(ERADICATE2_MAX_SCORE) + " -D ERADICATE2_INITHASH=" + strPreprocessorInitStructure;
-		if (printResult(clBuildProgram(clProgram, vDevices.size(), vDevices.data(), strBuildOptions.c_str(), NULL, NULL))) {
+		if (printResult(clBuildProgram(clProgram, vDevices.size(), vDevices.data(), strBuildOptions.c_str(), NULL, NULL)))
+		{
 #ifdef ERADICATE2_DEBUG
 			std::cout << std::endl;
 			std::cout << "build log:" << std::endl;
 
 			size_t sizeLog;
 			clGetProgramBuildInfo(clProgram, vDevices[0], CL_PROGRAM_BUILD_LOG, 0, NULL, &sizeLog);
-			char * const szLog = new char[sizeLog];
+			char *const szLog = new char[sizeLog];
 			clGetProgramBuildInfo(clProgram, vDevices[0], CL_PROGRAM_BUILD_LOG, sizeLog, szLog, NULL);
 
 			std::cout << szLog << std::endl;
@@ -364,16 +437,21 @@ int main(int argc, char * * argv) {
 		std::cout << std::endl;
 
 		Dispatcher d(clContext, clProgram, worksizeMax == 0 ? size : worksizeMax, size);
-		for (auto & i : vDevices) {
+		for (auto &i : vDevices)
+		{
 			d.addDevice(i, worksizeLocal, mDeviceIndex[i]);
 		}
 
 		d.run(mode);
 		clReleaseContext(clContext);
 		return 0;
-	} catch (std::runtime_error & e) {
+	}
+	catch (std::runtime_error &e)
+	{
 		std::cout << "std::runtime_error - " << e.what() << std::endl;
-	} catch (...) {
+	}
+	catch (...)
+	{
 		std::cout << "unknown exception occured" << std::endl;
 	}
 
